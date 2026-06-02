@@ -1,0 +1,18 @@
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Generated output
+*.pptx
+output/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
