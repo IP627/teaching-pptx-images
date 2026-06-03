@@ -286,6 +286,121 @@ Extracted from analyzing "零碳工厂" (Zero-Carbon Factory) second-prize winni
 6. **Dense but clean** — 130-200 shapes looks organized when colors are unified
 7. **Fill the canvas** — extend content to ~y=7.0 (of 7.5" height), leave no large empty zones
 
+## Enhanced Visual Effects (v5)
+
+New templates (11-17) include these production-quality effects derived from award-winning PPTX analysis:
+
+### Shadow (outerShdw)
+```python
+from lxml import etree
+
+def _get_spPr(shape):
+    ns = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
+    spPr = shape._element.find(f'{ns}spPr')
+    if spPr is None:
+        spPr = etree.SubElement(shape._element, f'{ns}spPr')
+    return spPr
+
+def add_shadow(shape, blur_rad=35000, dist=18000, alpha=18000):
+    spPr = _get_spPr(shape)
+    ns_a = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+    effectLst = spPr.find(f'{{{ns_a}}}effectLst')
+    if effectLst is None:
+        effectLst = etree.SubElement(spPr, f'{{{ns_a}}}effectLst')
+    outerShdw = etree.SubElement(effectLst, f'{{{ns_a}}}outerShdw', {
+        'blurRad': str(blur_rad), 'dist': str(dist),
+        'dir': '5400000', 'algn': 'ctr',
+    })
+    srgbClr = etree.SubElement(outerShdw, f'{{{ns_a}}}srgbClr', {'val': '000000'})
+    etree.SubElement(srgbClr, f'{{{ns_a}}}alpha', {'val': str(alpha)})
+```
+
+### Gradient Fill (2-stop linear)
+```python
+def set_gradient_fill(shape, c1_hex, c2_hex, angle=90):
+    spPr = _get_spPr(shape)
+    ns_a = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+    for sf in spPr.findall(f'{{{ns_a}}}solidFill'):
+        spPr.remove(sf)
+    gradFill = etree.SubElement(spPr, f'{{{ns_a}}}gradFill', {'rotWithShape': '1'})
+    gsLst = etree.SubElement(gradFill, f'{{{ns_a}}}gsLst')
+    for pos, clr in [('0', c1_hex), ('100000', c2_hex)]:
+        gs = etree.SubElement(gsLst, f'{{{ns_a}}}gs', {'pos': pos})
+        etree.SubElement(gs, f'{{{ns_a}}}srgbClr', {'val': clr})
+    lin = etree.SubElement(gradFill, f'{{{ns_a}}}lin', {'ang': str(angle * 60000), 'scaled': '1'})
+```
+
+### Updated `rrect()` with shadow + gradient support
+```python
+def rrect(s, l, t, w, h, fill, border=None, radius=0.04, shadow=False, gradient=None):
+    sh = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(l),Inches(t),Inches(w),Inches(h))
+    if gradient:
+        sh.fill.solid(); sh.fill.fore_color.rgb = fill  # fallback
+        set_gradient_fill(sh, gradient[0], gradient[1])
+    else:
+        sh.fill.solid(); sh.fill.fore_color.rgb = fill
+    if border: sh.line.color.rgb = border; sh.line.width = Pt(0.5)
+    else: sh.line.fill.background()
+    sh.adjustments[0] = radius
+    if shadow: add_shadow(sh)
+    return sh
+```
+
+Usage: `rrect(slide, x, y, w, h, WHITE, border=LINE, shadow=True)` or `rrect(slide, x, y, w, h, B1, gradient=('1E5793','3D7AB5'))`
+
+## Template Catalog (17 total)
+
+Each template is a standalone `.py` script in `templates/`. Run individually to generate `.pptx`.
+
+### 基础结构类 (Layout & Structure)
+| # | Template | Source | Best For |
+|---|----------|--------|----------|
+| 01 | `01_three_column_pipeline.py` | 零碳工厂/交通运输/视觉传感小车 | 三栏流水线：输入→过程→产出 |
+| 02 | `02_four_stage_progressive.py` | 思政-明大德/交通运输/建筑工程 | 四阶递进课程体系 |
+| 03 | `03_ksa_matrix.py` | 交通运输/建筑工程/视觉传感小车 | 知识/技能/素养三维目标 |
+| 04 | `04_center_radial.py` | 思政-明大德/视觉传感小车/寻路立心 | 中心放射四驱联动 |
+| 05 | `05_gksz_integration.py` | 建筑工程/重构框架/智能摆渡车 | 岗课赛证四维融通 |
+
+### 教学流程类 (Teaching Process)
+| # | Template | Source | Best For |
+|---|----------|--------|----------|
+| 06 | `06_teaching_process_timeline.py` | Z62/视觉传感小车/劳动教育 | 课前→课中→课后三段流程 |
+| 07 | `07_boppps_model.py` | Z68/寻路立心/交通运输 | BOPPPS六节点教学设计 |
+| 16 | `16_teaching_process_loop.py` | Z62/200页模板/重构框架 | 双线并进教学闭环 |
+
+### 思政与评价类 (Ideology & Evaluation)
+| # | Template | Source | Best For |
+|---|----------|--------|----------|
+| 08 | `08_ideological_integration.py` | 思政-明大德/交通运输 | 课程思政融入渗透体系 |
+| 09 | `09_evaluation_dashboard.py` | 劳动教育/明大德/建筑工程 | 多维评价体系仪表盘 |
+| 11 | `11_teaching_dashboard.py` ✨ | 200页模板/劳动教育 | KPI仪表盘+进度条+权重 |
+| 12 | `12_capability_radar.py` ✨ | 200页模板/明大德/建筑工程 | 六维能力雷达画像 |
+
+### 关系与对比类 (Relationship & Comparison)
+| # | Template | Source | Best For |
+|---|----------|--------|----------|
+| 10 | `10_course_panorama.py` | 重构框架/建筑工程 | 课程体系全景图 |
+| 13 | `13_cross_fusion_matrix.py` ✨ | 29模板/200页模板 | 多维度交叉融合矩阵 |
+| 14 | `14_comparison_dual_column.py` ✨ | 200页模板/明大德 | 教学重难点对比双栏 |
+
+### 循环与导航类 (Cycle & Navigation)
+| # | Template | Source | Best For |
+|---|----------|--------|----------|
+| 15 | `15_pdca_cycle.py` ✨ | 200页模板/重构框架 | PDCA四象限质量改进 |
+| 17 | `17_cover_navigation.py` ✨ | 200页模板/29模板 | 封面/目录/章节/结尾页 |
+
+✨ = New v5 templates with shadow + gradient effects.
+
+## Typography Tiers (from 998-slide analysis)
+
+| Tier | Size | Usage |
+|------|------|-------|
+| Title | 16-18pt | Page title (页标题) |
+| Section | 12-14pt | Section header (区标题) |
+| Card Title | 10-11pt | Card/column title (卡片标题) |
+| Body | 8-9pt | Body text (正文) |
+| Note | 7-7.5pt | Annotation/footer (标注/脚注) |
+
 ## Iteration Workflow
 
 Follow this proven 4-version approach:
